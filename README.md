@@ -43,7 +43,11 @@ module "eks" {
 
 Then, run `terraform init` and `terraform apply`. Next, generate a kubeconfig for your cluster via `aws eks update-kubeconfig --region <YOUR-REGION> --name <ENV-NAME>`.
 
-### Step 3 (Optional): Create an RDS instance
+### Step 3: Update the DNS record for your instance
+
+Point a DNS record to the load balancer IP of the cluster (found from the AWS console).
+
+### Step 4 (Optional): Create an RDS instance
 
 Inside the `.infra` folder, create a directory called `rds`. In this directoy, add the following `main.tf` file:
 
@@ -60,7 +64,7 @@ module "eks" {
 }
 ```
 
-### Step 4: Install Porter Helm chart
+### Step 5: Install Porter Helm chart
 
 Finally, inside the `.infra` folder, create a directory called `porter`. In this directory, add the following `values.yaml` chart:
 
@@ -100,6 +104,12 @@ server:
   #   restrictedDomain: ""
   basicLogin:
     enabled: true
+  postgres:
+    # TODO: fill out host, db name, user, and password for database instance
+    host: my-host
+    name: porter
+    user: porter
+    password: porter
   githubApp:
     enabled: true
     clientId: ""
@@ -111,10 +121,6 @@ server:
       -----BEGIN RSA PRIVATE KEY-----
       TODO: PRIVATE KEY CONTENTS
       -----END RSA PRIVATE KEY-----
-postgresql:
-  enabled: true
-  image:
-    tag: "11.12.0"
 ```
 
 Then, run `helm install porter ../charts/porter --values values.yaml`.
