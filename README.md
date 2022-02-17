@@ -43,7 +43,24 @@ module "eks" {
 
 Then, run `terraform init` and `terraform apply`. Next, generate a kubeconfig for your cluster via `aws eks update-kubeconfig --region <YOUR-REGION> --name <ENV-NAME>`.
 
-### Step 3: Install Porter Helm chart
+### Step 3 (Optional): Create an RDS instance
+
+Inside the `.infra` folder, create a directory called `rds`. In this directoy, add the following `main.tf` file:
+
+```hcl
+module "eks" {
+  source = "../../../modules/eks"
+
+  aws_region = "us-east-2" # TODO: your AWS region
+  aws_profile = "default" # TODO: your AWS profile, if not default
+  env_name = "production" # TODO: the name of your environment
+  vpc_id = "" # TODO: the VPC ID, output from the step above
+  vpc_cidr_block = "" # TODO: the VPC CIDR block from above
+  database_subnets = [] # TODO: fill these out with the database subnet IDs from above
+}
+```
+
+### Step 4: Install Porter Helm chart
 
 Finally, inside the `.infra` folder, create a directory called `porter`. In this directory, add the following `values.yaml` chart:
 
