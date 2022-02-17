@@ -1,0 +1,243 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "porter.fullname" . }}
+  labels:
+    {{- include "porter.labels" . | nindent 4 }}
+spec:
+{{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+{{- end }}
+  selector:
+    matchLabels:
+      {{- include "porter.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+    {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      labels:
+        {{- include "porter.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "porter.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /api/livez
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /api/readyz
+              port: http
+          env:
+          - name: DEBUG
+            value: "false"
+          - name: STATIC_FILE_PATH
+            value: /porter/static
+          - name: SERVER_PORT
+            value: "8080"
+          - name: SERVER_TIMEOUT_READ
+            value: "5s"
+          - name: SERVER_TIMEOUT_WRITE
+            value: "300s"
+          - name: SERVER_TIMEOUT_IDLE
+            value: "305s"
+          - name: SERVER_URL
+            value: {{ .Values.server.url }}
+          - name: HELM_APP_REPO_URL
+            value: https://charts.getporter.dev
+          - name: HELM_ADD_ON_REPO_URL
+            value: https://chart-addons.getporter.dev
+          - name: SQL_LITE
+            value: "false"
+          - name: DB_PORT
+            value: "5432"
+          - name: DB_HOST
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-db-secret
+                key: host
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-db-secret
+                key: name
+          - name: DB_USER
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-db-secret
+                key: user
+          - name: DB_PASS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-db-secret
+                key: password
+          - name: REDIS_ENABLED
+            value: "false"
+          - name: ADMIN_INIT
+            value: "false"
+          - name: COOKIE_SECRETS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-api-server-keys
+                key: cookie-secrets
+          - name: ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-api-server-keys
+                key: db-encryption-key
+          {{- if and .Values.server.oldDBEncryptionKey .Values.server.newDBEncryptionKey }}
+          {{- if and (ne .Values.server.oldDBEncryptionKey "") (ne .Values.server.newDBEncryptionKey "") }}
+          - name: OLD_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-api-server-keys
+                key: old-db-encryption-key
+          - name: NEW_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-api-server-keys
+                key: new-db-encryption-key
+          {{- end }}
+          {{- end }}
+          {{- if .Values.server.instanceName }}
+          {{- if (ne .Values.server.instanceName "") }}
+          - name: INSTANCE_NAME
+            value: {{ .Values.server.instanceName }}
+          {{- end }}
+          {{- end }}
+          - name: DISABLE_ALLOWLIST
+            value: "true"
+          - name: TOKEN_GENERATOR_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-api-server-keys
+                key: token-encryption-key
+          - name: WELCOME_FORM_WEBHOOK
+            # TODO: make it so that this var does not need to be set
+            value: "http://localhost:8080"
+          - name: BASIC_LOGIN_ENABLED
+            value: {{ .Values.server.basicLogin.enabled | quote }}
+          {{- if .Values.server.slack.enabled }}
+          - name: SLACK_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: slack-client-id
+          - name: SLACK_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: slack-client-secret
+          {{- end }}
+          {{- if .Values.server.githubLogin.enabled }}
+          - name: GITHUB_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-client-id
+          - name: GITHUB_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-client-secret
+          {{- end }}
+          {{- if .Values.server.googleLogin.enabled }}
+          - name: GOOGLE_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: google-client-id
+          - name: GOOGLE_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: google-client-secret
+          - name: GOOGLE_RESTRICTED_DOMAIN
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: google-restricted-domain
+          {{- end }}
+          {{- if .Values.server.githubApp.enabled }}
+          - name: GITHUB_APP_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-app-client-id
+          - name: GITHUB_APP_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-app-client-secret
+          - name: GITHUB_APP_WEBHOOK_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-app-webhook-secret
+          - name: GITHUB_APP_NAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-app-name
+          - name: GITHUB_APP_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "porter.fullname" . }}-integration-keys
+                key: github-app-id
+          - name: GITHUB_APP_SECRET_PATH
+            value: /porter/docker/github_app_private_key.pem
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          {{- if .Values.ingress.enabled }}
+          - name: wss-ssl-certificate
+            mountPath: /etc/wss
+          {{- end }}
+          {{- if .Values.server.githubApp.enabled }}
+          - name: github-app-private-key
+            mountPath: /porter/docker
+          {{- end }}
+      volumes:
+      {{- if .Values.ingress.enabled }}
+      - name: wss-ssl-certificate
+        secret:
+          secretName: porter-cert-tls
+      {{- end }}
+      {{- if .Values.server.githubApp.enabled }}
+      - name: github-app-private-key
+        secret:
+          secretName: {{ include "porter.fullname" . }}-integration-keys
+          items:
+          - key: github-app-private-key
+            path: github_app_private_key.pem
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
