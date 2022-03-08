@@ -35,7 +35,7 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.server.port }}
               protocol: TCP
           livenessProbe:
             httpGet:
@@ -47,11 +47,11 @@ spec:
               port: http
           env:
           - name: DEBUG
-            value: "false"
+            value: "true"
           - name: STATIC_FILE_PATH
             value: /porter/static
           - name: SERVER_PORT
-            value: "8080"
+            value: {{ .Values.server.port | quote }}
           - name: SERVER_TIMEOUT_READ
             value: "5s"
           - name: SERVER_TIMEOUT_WRITE
@@ -203,6 +203,10 @@ spec:
                 key: github-app-id
           - name: GITHUB_APP_SECRET_PATH
             value: /porter/docker/github_app_private_key.pem
+          {{- end }}
+          {{- if .Values.server.initInCluster }}
+          - name: INIT_IN_CLUSTER
+            value: "true"
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

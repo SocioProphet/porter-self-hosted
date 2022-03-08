@@ -11,6 +11,12 @@ image:
   tag: "v0.12.6"
 
 server:
+  # initInCluster should be set to `true` if you want a default project created on the Porter instance 
+  # to automatically connect to the k8s cluster that the Porter instance is running in. 
+  initInCluster: true
+
+  port: 8080
+
   postgres: {}
   # if bringing your own postgres:
     # port: 5432
