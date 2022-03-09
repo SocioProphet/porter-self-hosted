@@ -8,7 +8,7 @@ image:
   repository: porter1/porter
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.12.6"
+  tag: "v0.18.0"
 
 server:
   # initInCluster should be set to `true` if you want a default project created on the Porter instance 
@@ -32,7 +32,7 @@ server:
   # newDBEncryptionKey: "__random_strong_encryption_key__"
   
   tokenEncryptionKey: "secret"
-  url: self-hosted.example.com
+  url: http://localhost:8080
   basicLogin:
     enabled: true
   slack:
