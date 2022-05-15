@@ -5,7 +5,7 @@ resource "random_string" "suffix" {
 
 resource "aws_security_group" "worker_group_mgmt_one" {
   name_prefix = "worker_group_mgmt_one"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port = 22
@@ -20,7 +20,7 @@ resource "aws_security_group" "worker_group_mgmt_one" {
 
 resource "aws_security_group" "worker_group_mgmt_two" {
   name_prefix = "worker_group_mgmt_two"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = var.vpc_id
 
   ingress {
     from_port = 22
@@ -35,7 +35,7 @@ resource "aws_security_group" "worker_group_mgmt_two" {
 
 resource "aws_security_group" "all_worker_mgmt" {
   name_prefix = "all_worker_management"
-  vpc_id      = module.vpc.vpc_id
+  vpc_id      = var.vpc_id
 
   # TODO: support additional node groups
   ingress {
@@ -53,7 +53,6 @@ resource "aws_security_group" "all_worker_mgmt" {
 
 module "eks" {
   depends_on = [
-    module.vpc,
     aws_security_group.worker_group_mgmt_one,
     aws_security_group.worker_group_mgmt_two,
     aws_security_group.all_worker_mgmt,
@@ -111,7 +110,7 @@ module "eks" {
           "value"               = "true"
         },
         {
-          "key"                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
+          "key"                 = "k8s.io/cluster-autoscaler/${var.env_name}"
           "propagate_at_launch" = "false"
           "value"               = "true"
         }
@@ -133,7 +132,7 @@ module "eks" {
 
       additional_userdata                     = "echo foo bar"
       additional_security_group_ids           = [aws_security_group.worker_group_mgmt_two.id]
-      subnets                                 = var.additional_stateful_nodegroup_enabled ? [module.vpc.private_subnets[0]] : module.vpc.private_subnets
+      subnets                                 = var.additional_stateful_nodegroup_enabled ? [var.private_subnets[0]] : var.private_subnets
       asg_desired_capacity                    = var.additional_nodegroup_min_instances
       asg_max_size                            = var.additional_nodegroup_max_instances
       asg_min_size                            = var.additional_nodegroup_min_instances
@@ -149,7 +148,7 @@ module "eks" {
           "value"               = "true"
         },
         {
-          "key"                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
+          "key"                 = "k8s.io/cluster-autoscaler/${var.env_name}"
           "propagate_at_launch" = "false"
           "value"               = "true"
         }
@@ -182,7 +181,7 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 resource "aws_iam_policy" "worker_policy" {
-  name        = "${var.cluster_name}-${random_string.suffix.result}"
+  name        = "${var.env_name}-${random_string.suffix.result}"
   description = "Worker policy for the ALB Ingress"
 
   policy = file("${path.module}/iam-policy.json")
@@ -253,12 +252,12 @@ resource "helm_release" "ingress" {
 
   set {
     name  = "vpcId"
-    value = module.vpc.vpc_id
+    value = var.vpc_id
   }
 
   set {
     name  = "clusterName"
-    value = var.cluster_name
+    value = var.env_name
   }
 
   values = [
