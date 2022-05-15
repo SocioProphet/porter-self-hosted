@@ -1,0 +1,10 @@
+spec:
+  template:
+    spec:
+      nodeSelector:
+        porter.run/workload-kind: "system"
+      tolerations:
+      - key: "porter.run/workload-kind"
+        operator: "Equal"
+        value: "system"
+        effect: "NoSchedule"

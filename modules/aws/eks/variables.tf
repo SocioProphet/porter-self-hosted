@@ -34,6 +34,16 @@ variable "env_name" {
   default = "porter"
 }
 
+variable "cluster_version" {
+  type    = string
+  default = "1.22"
+}
+
+variable "system_machine_type" {
+  type    = string
+  default = "t2.medium"
+}
+
 variable "machine_type" {
   description = "The machine type to use for autoscaling nodes in the EKS cluster."
 
@@ -54,4 +64,50 @@ variable "max_instances" {
   type = number
 
   default = 10
+}
+
+
+variable "max_instances" {
+  type    = number
+  default = 10
+}
+
+variable "min_instances" {
+  type    = number
+  default = 1
+}
+
+variable "additional_nodegroup_max_instances" {
+  type    = number
+  default = 10
+}
+
+variable "additional_nodegroup_min_instances" {
+  type    = number
+  default = 10
+}
+
+variable "additional_nodegroup_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "additional_nodegroup_machine_type" {
+  type    = string
+  default = "t2.medium"
+}
+
+variable "additional_nodegroup_label" {
+  type    = string
+  default = "porter.run/workload-kind=job"
+}
+
+variable "additional_nodegroup_taint" {
+  type    = string
+  default = "porter.run/workload-kind=job:NoSchedule"
+}
+
+variable "additional_stateful_nodegroup_enabled" {
+  type    = bool
+  default = false
 }

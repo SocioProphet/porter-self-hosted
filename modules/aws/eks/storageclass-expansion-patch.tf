@@ -1,6 +1,6 @@
 resource "local_file" "kube_config" {
   filename = pathexpand("${path.module}/config")
-  content = <<-CONFIG
+  content  = <<-CONFIG
     apiVersion: v1
     kind: Config
     clusters:
@@ -23,7 +23,7 @@ resource "local_file" "kube_config" {
 
 resource "null_resource" "patch_storageclass" {
   depends_on = [
-    module.eks, 
+    module.eks,
     aws_iam_policy.worker_policy,
   ]
 
@@ -33,7 +33,7 @@ resource "null_resource" "patch_storageclass" {
   }
 
   provisioner "local-exec" {
-    command     = <<CREATE
+    command = <<CREATE
 kubectl patch storageclass gp2 --kubeconfig ${path.module}/config --type merge --patch "$(cat ${path.module}/storageclass-expansion-patch.yaml)"
     CREATE
   }
