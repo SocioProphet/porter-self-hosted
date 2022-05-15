@@ -105,3 +105,13 @@ variable "additional_stateful_nodegroup_enabled" {
   type    = bool
   default = false
 }
+
+variable "spot_instances_enabled" {
+  type    = bool
+  default = false
+}
+
+variable "spot_price" {
+  type    = string
+  default = ""
+}
