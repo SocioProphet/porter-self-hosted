@@ -29,7 +29,7 @@ Inside the `.infra` folder, create a directory called `eks`. In this directoy, a
 
 ```hcl
 module "eks" {
-  source = "../../../modules/eks"
+  source = "../../modules/aws/eks"
 
   aws_region = "us-east-2" # TODO: your AWS region
   aws_profile = "default" # TODO: your AWS profile, if not default
@@ -53,7 +53,7 @@ Inside the `.infra` folder, create a directory called `rds`. In this directoy, a
 
 ```hcl
 module "eks" {
-  source = "../../../modules/eks"
+  source = "../../modules/aws/eks"
 
   aws_region = "us-east-2" # TODO: your AWS region
   aws_profile = "default" # TODO: your AWS profile, if not default

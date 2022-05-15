@@ -66,12 +66,6 @@ variable "max_instances" {
   default = 10
 }
 
-
-variable "max_instances" {
-  type    = number
-  default = 10
-}
-
 variable "min_instances" {
   type    = number
   default = 1
