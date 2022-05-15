@@ -70,7 +70,7 @@ Finally, inside the `.infra` folder, create a directory called `porter`. In this
 
 ```yaml
 image:
-  tag: "v0.15.3" # TODO: latest porter image tag
+  tag: "v0.26.3" # TODO: latest porter image tag
 ingress:
   annotations:
     kubernetes.io/ingress.class: nginx
