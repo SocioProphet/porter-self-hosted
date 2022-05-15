@@ -34,7 +34,7 @@ resource "helm_release" "cluster-autoscaler" {
 
   set {
     name  = "autoDiscovery.clusterName"
-    value = var.cluster_name
+    value = var.env_name
   }
 
   # run cluster-autoscaler chart on "system" nodes

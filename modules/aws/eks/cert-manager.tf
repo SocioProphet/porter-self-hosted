@@ -73,6 +73,6 @@ resource "helm_release" "clusterissuer" {
 
   set {
     name  = "email"
-    value = var.issuer_email
+    value = var.support_email
   }
 }
