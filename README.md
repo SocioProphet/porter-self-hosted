@@ -52,8 +52,8 @@ Point a DNS record to the load balancer IP of the cluster (found from the AWS co
 Inside the `.infra` folder, create a directory called `rds`. In this directoy, add the following `main.tf` file:
 
 ```hcl
-module "eks" {
-  source = "../../modules/aws/eks"
+module "rds" {
+  source = "../../modules/aws/rds"
 
   aws_region = "us-east-2" # TODO: your AWS region
   aws_profile = "default" # TODO: your AWS profile, if not default
