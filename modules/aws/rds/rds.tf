@@ -31,9 +31,9 @@ module "db" {
   identifier = "rds-${var.env_name}"
 
   engine               = "postgres"
-  engine_version       = "11.10"
-  family               = "postgres11"
-  major_engine_version = "11"
+  engine_version       = "13.6"
+  family               = "postgres13"
+  major_engine_version = "13"
   instance_class       = "db.t3.large"
 
   allocated_storage     = 10
@@ -43,7 +43,7 @@ module "db" {
   # NOTE: Do NOT use 'user' as the value for 'username' as it throws:
   # "Error creating DB Instance: InvalidParameterValue: MasterUsername
   # user cannot be used as it is a reserved word used by the engine"
-  name     = "postgres${var.env_name}"
+  name     = replace(replace(var.env_name, "-", ""), "_", "")
   username = "porteruser"
   password = random_string.postgres_password.result
   port     = 5432
