@@ -1,37 +1,51 @@
 resource "kubernetes_namespace" "ingress_nginx" {
   metadata {
-    name      = "ingress-nginx"
+    name = "ingress-nginx"
   }
 }
 
 resource "helm_release" "nginx-ingress" {
   # Cluster must exist before helm release can be deployed.
-  depends_on = [ 
-      module.eks, 
-      aws_iam_policy.worker_policy,
-      helm_release.ingress,
+  depends_on = [
+    module.eks,
+    aws_iam_policy.worker_policy,
+    helm_release.ingress,
   ]
 
-  version = "v3.20.1"
+  version = "v4.0.18"
 
-  name = "nginx-ingress"
-  namespace = "ingress-nginx"
+  name       = "nginx-ingress"
+  namespace  = "ingress-nginx"
   repository = "https://kubernetes.github.io/ingress-nginx"
-  chart = "ingress-nginx"
+  chart      = "ingress-nginx"
 
   values = [
     <<VALUES
 controller:
+  config:
+    use-proxy-protocol: 'true'
   nodeSelector:
     kubernetes.io/os: linux
-    porter.run/system: "true"
+    porter.run/workload-kind: "system"
+  tolerations:
+  - key: "porter.run/workload-kind"
+    operator: "Equal"
+    value: "system"
+    effect: "NoSchedule"
   admissionWebhooks:
     patch:
       nodeSelector:
-        porter.run/system: "true"
+        porter.run/workload-kind: "system"
+      tolerations:
+      - key: "porter.run/workload-kind"
+        operator: "Equal"
+        value: "system"
+        effect: "NoSchedule"
   service:
     annotations:
+      service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
       service.beta.kubernetes.io/aws-load-balancer-type: nlb-ip
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
   metrics:
     annotations:
       prometheus.io/port: '10254'
@@ -66,7 +80,12 @@ controller:
           topologyKey: kubernetes.io/hostname
 defaultBackend:
   nodeSelector:
-    porter.run/system: "true"
+    porter.run/workload-kind: "system"
+  tolerations:
+  - key: "porter.run/workload-kind"
+    operator: "Equal"
+    value: "system"
+    effect: "NoSchedule"
 VALUES
   ]
 }

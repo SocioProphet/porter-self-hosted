@@ -5,7 +5,7 @@ resource "random_string" "suffix" {
 
 resource "aws_security_group" "worker_group_mgmt_one" {
   name_prefix = "worker_group_mgmt_one"
-  vpc_id      = var.vpc_id
+  vpc_id      = module.vpc.vpc_id
 
   ingress {
     from_port = 22
@@ -13,14 +13,14 @@ resource "aws_security_group" "worker_group_mgmt_one" {
     protocol  = "tcp"
 
     cidr_blocks = [
-      "10.0.0.0/8",
+      "${var.cluster_vpc_cidr_octets}.0.0/16",
     ]
   }
 }
 
 resource "aws_security_group" "worker_group_mgmt_two" {
   name_prefix = "worker_group_mgmt_two"
-  vpc_id      = var.vpc_id
+  vpc_id      = module.vpc.vpc_id
 
   ingress {
     from_port = 22
@@ -33,42 +33,76 @@ resource "aws_security_group" "worker_group_mgmt_two" {
   }
 }
 
+resource "aws_security_group" "all_worker_mgmt" {
+  name_prefix = "all_worker_management"
+  vpc_id      = module.vpc.vpc_id
+
+  # TODO: support additional node groups
+  ingress {
+    from_port = 22
+    to_port   = 22
+    protocol  = "tcp"
+
+    cidr_blocks = [
+      "${var.cluster_vpc_cidr_octets}.0.0/16",
+      "172.16.0.0/12",
+      "192.168.0.0/16",
+    ]
+  }
+}
+
 module "eks" {
   depends_on = [
+    module.vpc,
     aws_security_group.worker_group_mgmt_one,
     aws_security_group.worker_group_mgmt_two,
+    aws_security_group.all_worker_mgmt,
   ]
 
   source          = "terraform-aws-modules/eks/aws"
   version         = "17.22.0"
   cluster_name    = var.env_name
-  cluster_version = "1.20"
+  cluster_version = var.cluster_version
   subnets         = var.private_subnets
   enable_irsa     = true
 
   vpc_id = var.vpc_id
 
-  worker_groups_launch_template = [
-    {
-      name                          = "worker-group-1"
-      instance_type                 = "t2.medium"
-      additional_userdata           = "echo foo bar"
-      asg_desired_capacity          = 2
-      additional_security_group_ids = [aws_security_group.worker_group_mgmt_one.id]
+  worker_groups_launch_template = concat([{
+    name                                    = "worker-group-1"
+    instance_type                           = var.system_machine_type
+    additional_userdata                     = "echo foo bar"
+    asg_desired_capacity                    = 2
+    instance_refresh_enabled                = true
+    update_default_version                  = true
+    instance_refresh_min_healthy_percentage = 90
+    instance_refresh_instance_warmup        = 300
+    additional_security_group_ids           = [aws_security_group.worker_group_mgmt_one.id]
 
-      kubelet_extra_args = join(" ", [
-        "--node-labels porter.run/system=true",
-        "--cluster-dns 172.20.0.10",
-        "--cluster-dns 169.254.20.10"
-      ])
+    kubelet_extra_args = join(" ", [
+      "--node-labels porter.run/workload-kind=system",
+      "--register-with-taints porter.run/workload-kind=system:NoSchedule",
+      "--cluster-dns 169.254.20.10",
+      "--cluster-dns 172.20.0.10"
+    ])
     },
     {
-      name                          = "worker-group-2"
-      instance_type                 = var.machine_type
-      additional_userdata           = "echo foo bar"
-      additional_security_group_ids = [aws_security_group.worker_group_mgmt_two.id]
-      asg_desired_capacity          = 1
-      asg_max_size                  = var.max_instances
+      name          = "worker-group-2"
+      instance_type = var.machine_type
+
+      override_instance_types = var.spot_instances_enabled ? [var.machine_type] : []
+      spot_instance_pools     = var.spot_instances_enabled ? 1 : 0
+      spot_price              = var.spot_instances_enabled ? var.spot_price : ""
+
+      additional_userdata                     = "echo foo bar"
+      additional_security_group_ids           = [aws_security_group.worker_group_mgmt_two.id]
+      asg_desired_capacity                    = var.min_instances
+      asg_max_size                            = var.max_instances
+      asg_min_size                            = var.min_instances
+      instance_refresh_enabled                = true
+      update_default_version                  = true
+      instance_refresh_min_healthy_percentage = 90
+      instance_refresh_instance_warmup        = 300
 
       tags = [
         {
@@ -77,19 +111,57 @@ module "eks" {
           "value"               = "true"
         },
         {
-          "key"                 = "k8s.io/cluster-autoscaler/${var.env_name}"
+          "key"                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
+          "propagate_at_launch" = "false"
+          "value"               = "true"
+        }
+      ]
+
+      kubelet_extra_args = join(" ", var.spot_instances_enabled ? [
+        "--node-labels porter.run/workload-kind=application,node.kubernetes.io/lifecycle=spot",
+        "--cluster-dns 169.254.20.10",
+        "--cluster-dns 172.20.0.10",
+        ] : [
+        "--node-labels porter.run/workload-kind=application",
+        "--cluster-dns 169.254.20.10",
+        "--cluster-dns 172.20.0.10",
+      ])
+    },
+    ], var.additional_nodegroup_enabled ? [{
+      name          = "worker-group-3"
+      instance_type = var.additional_nodegroup_machine_type
+
+      additional_userdata                     = "echo foo bar"
+      additional_security_group_ids           = [aws_security_group.worker_group_mgmt_two.id]
+      subnets                                 = var.additional_stateful_nodegroup_enabled ? [module.vpc.private_subnets[0]] : module.vpc.private_subnets
+      asg_desired_capacity                    = var.additional_nodegroup_min_instances
+      asg_max_size                            = var.additional_nodegroup_max_instances
+      asg_min_size                            = var.additional_nodegroup_min_instances
+      instance_refresh_enabled                = true
+      update_default_version                  = true
+      instance_refresh_min_healthy_percentage = 90
+      instance_refresh_instance_warmup        = 300
+
+      tags = [
+        {
+          "key"                 = "k8s.io/cluster-autoscaler/enabled"
+          "propagate_at_launch" = "false"
+          "value"               = "true"
+        },
+        {
+          "key"                 = "k8s.io/cluster-autoscaler/${var.cluster_name}"
           "propagate_at_launch" = "false"
           "value"               = "true"
         }
       ]
 
       kubelet_extra_args = join(" ", [
-        "--node-labels porter.run/autoscaling=enabled",
+        "--node-labels ${var.additional_nodegroup_label}",
+        "--register-with-taints ${var.additional_nodegroup_taint}",
+        "--cluster-dns 169.254.20.10",
         "--cluster-dns 172.20.0.10",
-        "--cluster-dns 169.254.20.10"
       ])
-    },
-  ]
+  }] : [])
 
   workers_group_defaults = {
     root_volume_type = "gp2"
@@ -110,7 +182,7 @@ data "aws_eks_cluster_auth" "cluster" {
 }
 
 resource "aws_iam_policy" "worker_policy" {
-  name        = "${var.env_name}-${random_string.suffix.result}"
+  name        = "${var.cluster_name}-${random_string.suffix.result}"
   description = "Worker policy for the ALB Ingress"
 
   policy = file("${path.module}/iam-policy.json")
@@ -172,7 +244,7 @@ resource "helm_release" "ingress" {
   chart      = "aws-load-balancer-controller"
   namespace  = "kube-system"
   repository = "https://aws.github.io/eks-charts"
-  version    = "v1.1.5"
+  version    = "v1.4.1"
 
   set {
     name  = "region"
@@ -181,18 +253,25 @@ resource "helm_release" "ingress" {
 
   set {
     name  = "vpcId"
-    value = var.vpc_id
+    value = module.vpc.vpc_id
   }
 
   set {
     name  = "clusterName"
-    value = var.env_name
+    value = var.cluster_name
   }
 
   values = [
     <<VALUES
 nodeSelector:
-  porter.run/system: "true"
+  porter.run/workload-kind: "system"
+tolerations:
+- key: "porter.run/workload-kind"
+  operator: "Equal"
+  value: "system"
+  effect: "NoSchedule"
+image:
+  repository: 602401143452.dkr.ecr.${var.aws_region}.amazonaws.com/amazon/aws-load-balancer-controller
 VALUES
   ]
 }

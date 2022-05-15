@@ -1,6 +1,6 @@
 resource "local_file" "kubeconfig" {
   filename = pathexpand("${path.module}/config")
-  content = <<-CONFIG
+  content  = <<-CONFIG
     apiVersion: v1
     kind: Config
     clusters:
@@ -21,20 +21,20 @@ resource "local_file" "kubeconfig" {
   CONFIG
 }
 
-resource "null_resource" "patch_coredns" {
+resource "null_resource" "patch_system_deployments" {
   depends_on = [
-    module.eks, 
+    module.eks,
     aws_iam_policy.worker_policy,
   ]
 
   // re-run when patch file changes
   triggers = {
-    issuer_sha1 = "${sha1(file("${path.module}/core-dns-patch.yaml"))}"
+    issuer_sha1 = "${sha1(file("${path.module}/system-patch-deployment.yaml"))}"
   }
 
   provisioner "local-exec" {
-    command     = <<CREATE
-kubectl patch deployment coredns --kubeconfig ${path.module}/config -n kube-system --type merge --patch "$(cat ${path.module}/core-dns-patch.yaml)"
+    command = <<CREATE
+kubectl patch deployment coredns --kubeconfig ${path.module}/config -n kube-system --type merge --patch "$(cat ${path.module}/system-patch-deployment.yaml)"
     CREATE
   }
 }

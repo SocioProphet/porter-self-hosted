@@ -1,7 +1,7 @@
 module "iam_assumable_role_admin" {
-    depends_on = [ 
-      module.eks
-    ]
+  depends_on = [
+    module.eks
+  ]
 
   source                        = "terraform-aws-modules/iam/aws//modules/iam-assumable-role-with-oidc"
   version                       = "3.6.0"
@@ -13,9 +13,9 @@ module "iam_assumable_role_admin" {
 }
 
 resource "aws_iam_policy" "cluster_autoscaler" {
-    depends_on = [ 
-      module.eks
-    ]
+  depends_on = [
+    module.eks
+  ]
 
   name_prefix = "cluster-autoscaler-${random_string.suffix.result}"
   description = "EKS cluster-autoscaler policy for cluster ${module.eks.cluster_id}"
@@ -32,7 +32,10 @@ data "aws_iam_policy_document" "cluster_autoscaler" {
       "autoscaling:DescribeAutoScalingInstances",
       "autoscaling:DescribeLaunchConfigurations",
       "autoscaling:DescribeTags",
+      "autoscaling:SetDesiredCapacity",
+      "autoscaling:TerminateInstanceInAutoScalingGroup",
       "ec2:DescribeLaunchTemplateVersions",
+      "ec2:DescribeInstanceTypes",
     ]
 
     resources = ["*"]

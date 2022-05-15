@@ -21,7 +21,7 @@ resource "helm_release" "cert-manager" {
   namespace  = "cert-manager"
   repository = "https://charts.jetstack.io"
   chart      = "cert-manager"
-  version    = "v1.1.0"
+  version    = "v1.5.5"
 
   set {
     name  = "installCRDs"
@@ -32,13 +32,28 @@ resource "helm_release" "cert-manager" {
   values = [
     <<VALUES
 nodeSelector:
-  porter.run/system: "true"
+  porter.run/workload-kind: "system"
+tolerations:
+- key: "porter.run/workload-kind"
+  operator: "Equal"
+  value: "system"
+  effect: "NoSchedule"
 webhook:
   nodeSelector:
-    porter.run/system: "true"
+    porter.run/workload-kind: "system"
+  tolerations:
+  - key: "porter.run/workload-kind"
+    operator: "Equal"
+    value: "system"
+    effect: "NoSchedule"
 cainjector:
   nodeSelector:
-    porter.run/system: "true"
+    porter.run/workload-kind: "system"
+  tolerations:
+  - key: "porter.run/workload-kind"
+    operator: "Equal"
+    value: "system"
+    effect: "NoSchedule"
 VALUES
   ]
 }
@@ -58,6 +73,6 @@ resource "helm_release" "clusterissuer" {
 
   set {
     name  = "email"
-    value = var.support_email
+    value = var.issuer_email
   }
 }

@@ -2,17 +2,17 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "3.63.0"
+      version = "4.0.0"
     }
 
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "2.4.1"
+      version = "2.0.2"
     }
 
     helm = {
       source  = "hashicorp/helm"
-      version = "2.4.1"
+      version = "2.0.2"
     }
 
     random = {
@@ -38,7 +38,7 @@ terraform {
 }
 
 provider "aws" {
-  region = var.aws_region
+  region  = var.aws_region
   profile = var.aws_profile
 }
 
@@ -55,3 +55,5 @@ provider "helm" {
     token                  = data.aws_eks_cluster_auth.cluster.token
   }
 }
+
+
