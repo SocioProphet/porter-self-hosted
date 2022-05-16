@@ -208,6 +208,10 @@ spec:
           - name: INIT_IN_CLUSTER
             value: "true"
           {{- end }}
+          {{- range $key, $val := .Values.server.additionalEnv }}
+          - name: {{ $key }}
+            value: {{ quote $val }}
+          {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:

@@ -33,6 +33,12 @@ server:
   
   tokenEncryptionKey: "secret"
   url: http://localhost:8080
+
+  additionalEnv: {}
+    # COOKIE_INSECURE: true
+    # ADMIN_EMAIL: test@example.com
+
+  # INTEGRATIONS:
   basicLogin:
     enabled: true
   slack:
