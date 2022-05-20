@@ -19,27 +19,6 @@ module "vpc" {
   database_subnets_enabled = false # TODO: if using RDS, enable this
   env_name = "production" # TODO: the name of your environment
 }
-```
-
-Then, run `terraform init` and `terraform apply`.
-
-### Step 2: Create the EKS cluster
-
-Inside the `.infra` folder, create a directory called `eks`. In this directoy, add the following `main.tf` file:
-
-```hcl
-module "eks" {
-  source = "../../modules/aws/eks"
-
-  aws_region = "us-east-2" # TODO: your AWS region
-  aws_profile = "default" # TODO: your AWS profile, if not default
-  env_name = "production" # TODO: the name of your environment
-  vpc_id = "" # TODO: the VPC ID, output from the step above
-  private_subnets = [] # TODO: fill these out with the subnet IDs from above
-
-  support_email = "contact@porter.run" # TODO: support email for certificate updates
-}
-
 
 output "vpc_id" {
   description = "The resulting id of the VPC."
@@ -59,6 +38,26 @@ output "database_subnets" {
 output "vpc_cidr_block" {
   description = "The CIDR block of the created VPC."
   value       = module.vpc.vpc_cidr_block
+}
+```
+
+Then, run `terraform init` and `terraform apply`.
+
+### Step 2: Create the EKS cluster
+
+Inside the `.infra` folder, create a directory called `eks`. In this directoy, add the following `main.tf` file:
+
+```hcl
+module "eks" {
+  source = "../../modules/aws/eks"
+
+  aws_region = "us-east-2" # TODO: your AWS region
+  aws_profile = "default" # TODO: your AWS profile, if not default
+  env_name = "production" # TODO: the name of your environment
+  vpc_id = "" # TODO: the VPC ID, output from the step above
+  private_subnets = [] # TODO: fill these out with the subnet IDs from above
+
+  support_email = "contact@porter.run" # TODO: support email for certificate updates
 }
 ```
 
