@@ -106,7 +106,7 @@ output "db_master_password" {
 }
 ```
 
-To output the values from RDS, run `terraform output -json`. 
+Then, run `terraform init` and `terraform apply`. To output the values from RDS, run `terraform output -json`. 
 
 ### Step 5: Install Porter Helm chart
 
